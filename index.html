@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Привычки">
+<meta name="theme-color" content="#000000">
+<title>Привычки</title>
+<style>
+:root{--bg:#000;--fg:#fff;--mut:#8e8e93;--base:#0b0b0e;--panel:#1a1a1c;--line:#2c2c2e;--acc:#6c78ff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root{--bg:#f2f2f7;--fg:#000;--mut:#6e6e73;--base:#fff;--panel:#fff;--line:#d1d1d6}}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;min-height:100vh;padding-bottom:110px}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px}
+.top h1{font-size:20px;margin:0;font-weight:600}
+.sq{width:44px;height:44px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center}
+.sq svg{width:22px;height:22px}
+.week{display:flex;justify-content:space-between;padding:0 8px;margin:6px 0 14px;touch-action:pan-y}
+.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 0;border-radius:30px;color:var(--mut);font-size:15px}
+.day i{font-style:normal;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:17px}
+.day.sel{background:var(--acc);color:#fff;font-weight:700}
+.day.sel i{background:rgba(255,255,255,.22)}
+.day.full i{box-shadow:inset 0 0 0 2px #34c759}
+.list{padding:0 16px;display:flex;flex-direction:column;gap:12px}
+.card{--c:#6c78ff;display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:24px;
+background:color-mix(in srgb,var(--c) 16%,var(--base));border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
+.ic{font-size:30px;width:36px;text-align:center}
+.tx{flex:1;min-width:0;text-align:left}
+.tx b{display:block;font-size:19px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx span{color:var(--mut);font-size:15px}
+.ring{width:52px;height:52px;border-radius:50%;border:5px solid color-mix(in srgb,var(--c) 55%,transparent);display:grid;place-items:center;flex:none;transition:background-color .15s,border-color .15s}
+.ring svg{width:26px;height:26px}
+.ring.done{background:var(--c);border-color:var(--c)}
+.ring.run{border-color:var(--c)}
+.empty{text-align:center;color:var(--mut);padding:40px 20px}
+.tabs{position:fixed;left:14px;right:14px;bottom:0;margin-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);display:flex;background:var(--panel);border:1px solid var(--line);border-radius:36px;padding:6px;z-index:5}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:28px;font-size:12px;color:var(--fg)}
+.tab svg{width:26px;height:26px}
+.tab.on{color:var(--acc)}.tb{display:flex;flex:1;position:relative;z-index:1}.pill{position:absolute;top:6px;bottom:6px;left:0;width:0;border-radius:28px;background:rgba(127,127,127,.2);z-index:0}
+.sec{padding:0 16px 16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:12px}
+.panel h3{margin:0 0 12px;font-size:17px}
+.bars{display:flex;gap:8px;align-items:flex-end;height:120px}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px;font-size:12px;color:var(--mut)}
+.bar div{width:100%;border-radius:8px;background:var(--acc);min-height:4px}
+.srow{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.srow:first-of-type{border-top:0}
+.srow .m{flex:1;min-width:0}
+.srow .m b{display:block;font-weight:600}
+.srow .m span{font-size:13px;color:var(--mut)}
+.dots{display:flex;gap:3px;margin-top:6px}
+.dots u{width:9px;height:9px;border-radius:3px;background:var(--line)}
+.dots u.on{background:var(--c)}
+.srow .p{font-weight:700;font-size:18px}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:20}
+.ov.open{display:flex}
+.sheet{width:100%;max-height:92%;overflow:auto;background:var(--panel);border-radius:28px 28px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom,0px) + 20px)}
+.sheet h2{margin:0 0 14px;font-size:20px}
+label{display:block;font-size:13px;color:var(--mut);margin:14px 0 6px}
+input[type=text],input[type=number],textarea{width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:inherit;font-size:17px}
+textarea{height:130px;font-size:12px;font-family:ui-monospace,Menlo,monospace}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--bg);font-size:22px;display:grid;place-items:center;padding:0 8px}
+.chip.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+.seg{display:flex;background:var(--bg);border-radius:14px;padding:3px;border:1px solid var(--line)}
+.seg button{flex:1;padding:10px 0;border-radius:11px;font-size:15px;color:var(--mut)}
+.seg button.on{background:var(--acc);color:#fff}
+.sw{width:38px;height:38px;border-radius:50%;border:3px solid transparent}
+.sw.on{border-color:var(--fg)}
+.btn{width:100%;padding:15px;border-radius:16px;font-weight:600;font-size:17px;background:var(--acc);color:#fff;margin-top:20px}
+.btn.alt{background:var(--bg);color:var(--fg);border:1px solid var(--line);margin-top:10px}
+.btn.red{background:none;color:#ff453a;margin-top:6px}
+</style></head>
+<body>
+<div id="app"></div>
+<nav class="tabs" id="tabs"><div class="pill" id="pill"></div><div class="tb" id="tb"></div></nav>
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+if(!window.gsap){var nf=function(t,a,b){var o=b||a;if(o&&o.onComplete)o.onComplete();return{}};window.gsap={to:nf,from:nf,fromTo:nf,set:function(){},killTweensOf:function(){},globalTimeline:{timeScale:function(){}}}}
+try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)gsap.globalTimeline.timeScale(20)}catch(e){}
+</script>
+<script>
+var PAL=['#a855f7','#22a58a','#3b82f6','#f59e0b','#ec4899','#ef4444','#84cc16','#06b6d4'];
+var EMO=['☀️','🛏️','🪥','💧','🧘','🏃','📚','💪','🍎','😴','💊','✍️'];
+var IC={plus:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+play:'<svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15l13-7.5z"/></svg>',
+pause:'<svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+ok:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'};
+var TABS=[['habits','Привычки','<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="4" rx="2"/><rect x="4" y="10" width="16" height="4" rx="2"/><rect x="4" y="16" width="16" height="4" rx="2"/></svg>'],
+['stats','Статистика','<svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="11" width="4" height="9" rx="1.5"/><rect x="10" y="5" width="4" height="15" rx="1.5"/><rect x="16" y="8" width="4" height="12" rx="1.5"/></svg>'],
+['settings','Настройки','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>']];
+var WD=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+function seed(){return{habits:[
+{id:'a1',name:'Встать с кровати',emoji:'☀️',color:'#f59e0b',type:'check',goal:1},
+{id:'a2',name:'Заправить кровать',emoji:'🛏️',color:'#a855f7',type:'check',goal:1},
+{id:'a3',name:'Умыться',emoji:'💧',color:'#22a58a',type:'check',goal:1},
+{id:'a4',name:'Почистить зубы',emoji:'🪥',color:'#22a58a',type:'count',goal:2},
+{id:'a5',name:'Растяжка',emoji:'🧘',color:'#22a58a',type:'timer',goal:5}],log:{},run:null}}
+var S;try{S=JSON.parse(localStorage.getItem('habits_v1'))}catch(e){}
+if(!S||!S.habits)S=seed();
+function save(){try{localStorage.setItem('habits_v1',JSON.stringify(S))}catch(e){}}
+function key(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x}
+var today=new Date();today.setHours(12,0,0,0);
+var TK=key(today),sel=TK,off=0,view='habits',edit=null,form=null;
+function elapsed(){return S.run?Math.floor((Date.now()-S.run.start)/1000):0}
+function val(h,k){if(S.run&&S.run.id===h.id&&S.run.key===k)return S.run.base+elapsed();return(S.log[k]&&S.log[k][h.id])||0}
+function goal(h){return h.type==='timer'?h.goal*60:h.type==='count'?h.goal:1}
+function isDone(h,k){return val(h,k)>=goal(h)}
+function setVal(h,k,v){(S.log[k]=S.log[k]||{})[h.id]=v}
+function stopRun(){if(!S.run)return;var h=S.habits.find(function(x){return x.id===S.run.id});if(h)setVal(h,S.run.key,S.run.base+elapsed());S.run=null}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function mmss(s){return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function sub(h,k){var v=val(h,k);
+if(h.type==='count')return 'Каждый день, '+v+'/'+h.goal;
+if(h.type==='timer'){var run=S.run&&S.run.id===h.id&&S.run.key===k;return 'Каждый день, '+(run?mmss(v)+' / ':Math.floor(v/60)+'/')+h.goal+' мин'}
+return 'Каждый день'}
+function title(){if(sel===TK)return'Сегодня';var p=sel.split('-');var d=new Date(+p[0],+p[1]-1,+p[2]);return d.getDate()+'.'+String(d.getMonth()+1).padStart(2,'0')+' · '+WD[d.getDay()]}
+function render(anim,dir){
+var h='';
+if(view==='habits'){
+h+='<div class="top"><span style="width:44px"></span><h1>'+title()+'</h1><button class="sq" data-new="1" aria-label="Добавить">'+IC.plus.replace(/#fff/g,'currentColor')+'</button></div>';
+h+='<div class="week" id="week">';
+for(var i=-5;i<=1;i++){var d=addDays(today,i+off*7),k=key(d);
+var all=S.habits.length&&S.habits.every(function(x){return isDone(x,k)});
+h+='<button class="day'+(k===sel?' sel':'')+(all?' full':'')+'" data-day="'+k+'"><span>'+WD[d.getDay()]+'</span><i>'+d.getDate()+'</i></button>'}
+h+='</div><div class="list">';
+if(!S.habits.length)h+='<div class="empty">Привычек пока нет.<br>Нажми «+», чтобы создать первую.</div>';
+S.habits.forEach(function(x){
+var dn=isDone(x,sel),run=S.run&&S.run.id===x.id&&S.run.key===sel;
+var icon=dn?IC.ok:x.type==='timer'?(run?IC.pause:IC.play):IC.plus;
+h+='<div class="card" style="--c:'+x.color+'"><div class="ic">'+esc(x.emoji)+'</div><button class="tx" data-edit="'+x.id+'"><b>'+esc(x.name)+'</b><span data-sub="'+x.id+'">'+sub(x,sel)+'</span></button><button class="ring'+(dn?' done':'')+(run?' run':'')+'" data-act="'+x.id+'" aria-label="Отметить">'+icon+'</button></div>'});
+h+='</div>'}
+else if(view==='stats')h=statsHTML();
+else h=settingsHTML();
+gsap.killTweensOf('.ring');$('#app').innerHTML=h;
+$('#tb').innerHTML=TABS.map(function(t){return'<button class="tab'+(view===t[0]?' on':'')+'" data-tab="'+t[0]+'">'+t[2]+'<span>'+t[1]+'</span></button>'}).join('');
+var w=$('#week');if(w)swipe(w);afterRender(anim,dir)}
+function $(s){return document.querySelector(s)}
+var busy=false,first=true,pressed=null;
+function movePill(now){var on=document.querySelector('.tab.on'),nav=$('#tabs');if(!on||!nav)return;var a=on.getBoundingClientRect(),b=nav.getBoundingClientRect();gsap.to('#pill',{x:a.left-b.left-nav.clientLeft,width:a.width,duration:now?0:.5,ease:'power3.out'})}
+function afterRender(anim,dir){
+movePill(first);first=false;
+if(view==='habits'){
+if(anim==='all')gsap.from('.top h1',{opacity:0,y:-8,duration:.4});
+if(anim==='all'||anim==='week')gsap.from('.day',{x:(dir||0)*40,y:dir?0:-14,opacity:0,duration:.45,stagger:.04,ease:'power3.out'});
+if(anim==='all'||anim==='cards')gsap.from('.card',{y:26,opacity:0,scale:.96,duration:.5,stagger:.07,ease:'power3.out'});
+if(anim==='cards')gsap.from('.day.sel',{scale:.85,duration:.45,ease:'back.out(3)'});
+if(document.querySelector('.ring.run'))gsap.to('.ring.run',{scale:1.1,duration:.7,yoyo:true,repeat:-1,ease:'sine.inOut'});
+}else if(anim==='all'){
+gsap.from('.panel',{y:24,opacity:0,duration:.5,stagger:.1,ease:'power3.out'});
+if(view==='stats'){gsap.from('.bar div',{height:0,duration:.9,stagger:.06,delay:.15,ease:'power3.out'});gsap.from('.srow',{x:-16,opacity:0,duration:.4,stagger:.05,delay:.2});gsap.from('.dots u',{scale:0,duration:.3,stagger:.004,delay:.3})}
+}}
+function go(v){if(v===view||busy)return;busy=true;var o=['habits','stats','settings'],dx=o.indexOf(v)>o.indexOf(view)?30:-30;view=v;
+document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('on',t.dataset.tab===v)});movePill();
+gsap.to('#app',{opacity:0,x:-dx,duration:.18,ease:'power2.in',onComplete:function(){render('all');window.scrollTo(0,0);gsap.fromTo('#app',{opacity:0,x:dx},{opacity:1,x:0,duration:.35,ease:'power3.out',onComplete:function(){busy=false}})}})}
+function closeSheet(){gsap.to('#sheet',{yPercent:100,duration:.35,ease:'power3.in'});gsap.to('#ov',{backgroundColor:'rgba(0,0,0,0)',duration:.35,onComplete:function(){$('#ov').classList.remove('open');gsap.set('#ov',{clearProps:'backgroundColor'});gsap.set('#sheet',{clearProps:'transform'})}})}
+function popRing(id,burst){var r=document.querySelector('[data-act='+id+']');if(!r)return;
+if(burst){var b=r.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2,col=getComputedStyle(r.closest('.card')).getPropertyValue('--c')||'#fff';
+for(var i=0;i<10;i++){var p=document.createElement('div');p.style.cssText='position:fixed;left:'+cx+'px;top:'+cy+'px;width:8px;height:8px;margin:-4px;border-radius:50%;pointer-events:none;z-index:30;background:'+col;document.body.appendChild(p);var an=i/10*Math.PI*2,rd=40+Math.random()*30;gsap.to(p,{x:Math.cos(an)*rd,y:Math.sin(an)*rd,opacity:0,scale:.3,duration:.7,ease:'power2.out',onComplete:p.remove.bind(p)})}}
+if(r.classList.contains('run'))return;
+gsap.fromTo(r,{scale:.7},{scale:1,duration:.6,ease:'elastic.out(1,.45)'});
+var s=r.querySelector('svg');if(s&&r.classList.contains('done'))gsap.from(s,{scale:0,rotation:-60,duration:.45,ease:'back.out(3)'})}
+function swipe(el){var x0=null;el.addEventListener('touchstart',function(e){x0=e.touches[0].clientX},{passive:true});
+el.addEventListener('touchend',function(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50){var dr=dx>0?-1:1;off+=dr;render('week',dr)}})}
+function streak(h){var d=new Date(today);if(!isDone(h,key(d)))d=addDays(d,-1);var n=0;while(isDone(h,key(d))&&n<2000){n++;d=addDays(d,-1)}return n}
+function statsHTML(){
+var h='<div class="top"><span style="width:44px"></span><h1>Статистика</h1><span style="width:44px"></span></div><div class="sec">';
+h+='<div class="panel"><h3>Выполнено за 7 дней</h3><div class="bars">';
+for(var i=-6;i<=0;i++){var d=addDays(today,i),k=key(d),n=S.habits.filter(function(x){return isDone(x,k)}).length,p=S.habits.length?Math.round(n/S.habits.length*100):0;
+h+='<div class="bar"><span>'+p+'%</span><div style="height:'+Math.max(p*0.8,4)+'px"></div><span>'+WD[d.getDay()]+'</span></div>'}
+h+='</div></div><div class="panel"><h3>По привычкам</h3>';
+if(!S.habits.length)h+='<div class="empty">Нет данных</div>';
+S.habits.forEach(function(x){
+var c=0,dots='';for(var i=-13;i<=0;i++){var k=key(addDays(today,i)),dn=isDone(x,k);dots+='<u class="'+(dn?'on':'')+'"></u>'}
+for(var j=-29;j<=0;j++)if(isDone(x,key(addDays(today,j))))c++;
+h+='<div class="srow" style="--c:'+x.color+'"><div class="ic" style="font-size:26px">'+esc(x.emoji)+'</div><div class="m"><b>'+esc(x.name)+'</b><span>🔥 серия: '+streak(x)+' дн.</span><div class="dots">'+dots+'</div></div><div class="p">'+Math.round(c/30*100)+'%<div style="font-size:11px;color:var(--mut);font-weight:400">30 дней</div></div></div>'});
+return h+'</div></div>'}
+function settingsHTML(){
+return'<div class="top"><span style="width:44px"></span><h1>Настройки</h1><span style="width:44px"></span></div><div class="sec"><div class="panel"><h3>Перенос данных</h3><div style="color:var(--mut);font-size:14px;margin-bottom:10px">Данные хранятся только в этом браузере. Скопируй текст ниже, чтобы сохранить копию, или вставь свой и нажми «Загрузить».</div><textarea id="bk">'+esc(JSON.stringify({habits:S.habits,log:S.log}))+'</textarea><button class="btn" data-imp="1">Загрузить из текста</button><button class="btn alt" data-reset="1">Сбросить всё</button></div></div>'}
+function openSheet(id){
+edit=id;var h=id?S.habits.find(function(x){return x.id===id}):null;
+form=h?Object.assign({},h):{name:'',emoji:'⭐',color:PAL[1],type:'check',goal:1};
+sheet()}
+function sheet(){
+var f=form;
+var h='<h2>'+(edit?'Изменить привычку':'Новая привычка')+'</h2><label>Название</label><input type="text" id="f-name" value="'+esc(f.name)+'" placeholder="Например, Пить воду"><label>Иконка</label><div class="row">'+EMO.map(function(e){return'<button class="chip'+(f.emoji===e?' on':'')+'" data-emo="'+e+'">'+e+'</button>'}).join('')+'</div><label>Тип</label><div class="seg">'+[['check','Отметка'],['count','Счётчик'],['timer','Таймер']].map(function(t){return'<button class="'+(f.type===t[0]?'on':'')+'" data-type="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div>';
+if(f.type!=='check')h+='<label>'+(f.type==='count'?'Сколько раз в день':'Сколько минут в день')+'</label><input type="number" id="f-goal" min="1" max="999" value="'+f.goal+'" inputmode="numeric">';
+h+='<label>Цвет</label><div class="row">'+PAL.map(function(c){return'<button class="sw'+(f.color===c?' on':'')+'" style="background:'+c+'" data-col="'+c+'" aria-label="цвет"></button>'}).join('')+'</div><button class="btn" data-save="1">Сохранить</button><button class="btn alt" data-close="1">Отмена</button>';
+if(edit)h+='<button class="btn red" data-del="1">Удалить привычку</button>';
+$('#sheet').innerHTML=h;var ov=$('#ov');if(!ov.classList.contains('open')){ov.classList.add('open');gsap.fromTo('#ov',{backgroundColor:'rgba(0,0,0,0)'},{backgroundColor:'rgba(0,0,0,.55)',duration:.3});gsap.fromTo('#sheet',{yPercent:100},{yPercent:0,duration:.55,ease:'power4.out'});gsap.from('#sheet > *',{y:16,opacity:0,duration:.4,stagger:.035,delay:.1,ease:'power2.out'})}
+gsap.from('.chip.on,.sw.on,.seg button.on',{scale:.85,duration:.35,ease:'back.out(3)'})}
+function grabForm(){var n=$('#f-name');if(n)form.name=n.value;var g=$('#f-goal');if(g)form.goal=Math.max(1,parseInt(g.value)||1)}
+document.addEventListener('click',function(e){
+var t=e.target.closest('[data-tab],[data-day],[data-act],[data-edit],[data-new],[data-emo],[data-type],[data-col],[data-save],[data-close],[data-del],[data-imp],[data-reset]');
+if(!t){if(e.target.id==='ov')closeSheet();return}
+var d=t.dataset;
+if(d.tab)go(d.tab);
+else if(d.day){if(sel!==d.day){sel=d.day;render('cards')}}
+else if(d.new!==undefined)openSheet(null);
+else if(d.edit)openSheet(d.edit);
+else if(d.act){var h=S.habits.find(function(x){return x.id===d.act});var was=isDone(h,sel);setTimeout(function(){popRing(h.id,!was&&isDone(h,sel))},0);
+if(h.type==='check')setVal(h,sel,isDone(h,sel)?0:1);
+else if(h.type==='count')setVal(h,sel,isDone(h,sel)?0:val(h,sel)+1);
+else{if(S.run&&S.run.id===h.id&&S.run.key===sel)stopRun();else{var b=val(h,sel);stopRun();S.run={id:h.id,key:sel,start:Date.now(),base:b}}}
+save();render()}
+else if(d.emo){grabForm();form.emoji=d.emo;sheet()}
+else if(d.type){grabForm();form.type=d.type;sheet()}
+else if(d.col){grabForm();form.color=d.col;sheet()}
+else if(d.close!==undefined)closeSheet();
+else if(d.save!==undefined){grabForm();if(!form.name.trim()){$('#f-name').focus();return}
+form.name=form.name.trim();if(form.type==='check')form.goal=1;
+if(edit){var i=S.habits.findIndex(function(x){return x.id===edit});S.habits[i]=Object.assign(S.habits[i],form)}
+else{form.id='h'+Date.now().toString(36);S.habits.push(form)}
+save();closeSheet();view='habits';render('cards')}
+else if(d.del!==undefined){if(confirm('Удалить привычку и её историю?')){if(S.run&&S.run.id===edit)S.run=null;S.habits=S.habits.filter(function(x){return x.id!==edit});save();closeSheet();render('cards')}}
+else if(d.imp!==undefined){try{var o=JSON.parse($('#bk').value);if(!o.habits||!o.log)throw 0;S={habits:o.habits,log:o.log,run:null};save();alert('Данные загружены');view='habits';render()}catch(x){alert('Не удалось прочитать текст')}}
+else if(d.reset!==undefined){if(confirm('Удалить все привычки и историю?')){S=seed();S.habits=[];save();render()}}
+});
+setInterval(function(){if(!S.run||view!=='habits'||S.run.key!==sel)return;var h=S.habits.find(function(x){return x.id===S.run.id});if(!h)return;var s=document.querySelector('[data-sub='+h.id+']');if(s)s.textContent=sub(h,sel);var r=document.querySelector('[data-act='+h.id+']');if(r&&r.classList.contains('done')!==isDone(h,sel)){render();popRing(h.id,true)}},1000);
+document.addEventListener('pointerdown',function(e){var t=e.target.closest('.ring,.sq,.tab,.day,.btn,.chip,.sw');if(!t||t.classList.contains('run'))return;pressed=t;gsap.to(t,{scale:.9,duration:.12,overwrite:'auto'})});
+function rel(){if(pressed){gsap.to(pressed,{scale:1,duration:.4,ease:'back.out(3)',overwrite:'auto'});pressed=null}}
+document.addEventListener('pointerup',rel);document.addEventListener('pointercancel',rel);
+window.addEventListener('resize',function(){movePill(true)});
+render('all');
+</script>
+</body></html>
