@@ -74,6 +74,32 @@ textarea{height:130px;font-size:12px;font-family:ui-monospace,Menlo,monospace}
 .btn{width:100%;padding:15px;border-radius:16px;font-weight:600;font-size:17px;background:var(--acc);color:#fff;margin-top:20px}
 .btn.alt{background:var(--bg);color:var(--fg);border:1px solid var(--line);margin-top:10px}
 .btn.red{background:none;color:#ff453a;margin-top:6px}
+#tm{position:fixed;inset:0;z-index:25;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:env(safe-area-inset-top,0px) 20px calc(env(safe-area-inset-bottom,0px) + 24px);background:radial-gradient(120% 80% at 50% 30%,color-mix(in srgb,var(--c) 26%,var(--bg)),var(--bg) 72%);overflow:hidden}
+.tmglow{position:absolute;top:50%;left:50%;width:440px;height:440px;margin:-260px 0 0 -220px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--c) 50%,transparent),transparent 65%);opacity:.55;pointer-events:none}
+.tmx{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:16px;width:44px;height:44px;border-radius:50%;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;color:var(--fg);z-index:2}
+.tmx svg{width:20px;height:20px}
+.tmname{font-size:22px;font-weight:700;position:relative}
+.gauge{position:relative;width:min(86vw,360px);aspect-ratio:1}
+.gauge svg{width:100%;height:100%;overflow:visible}
+.trk{fill:none;stroke:color-mix(in srgb,var(--fg) 12%,transparent);stroke-width:16;stroke-linecap:round}
+.prg{fill:none;stroke-width:16;stroke-linecap:round}
+.prg.main{stroke:url(#gg)}
+.prg.gl{stroke:var(--c);opacity:.7}
+.tk{stroke:color-mix(in srgb,var(--fg) 22%,transparent);stroke-width:2;stroke-linecap:round;transition:stroke .3s}
+.tk.on{stroke:var(--c)}
+.knob{fill:#fff;filter:drop-shadow(0 0 7px var(--c))}
+.knob2{fill:var(--c)}
+.gc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;user-select:none}
+.ge{font-size:36px;margin-bottom:2px}
+.gt{font-size:62px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-1px;line-height:1.05;transition:opacity .3s}
+.gs{color:var(--fg);font-size:16px;font-weight:600}
+.gm{color:var(--mut);font-size:13px}
+#tm.paused .gt{opacity:.55}
+.tmbtns{display:flex;gap:12px;position:relative;width:min(86vw,360px)}
+.tb2{flex:1;padding:16px;border-radius:20px;font-weight:600;font-size:17px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:8px;color:var(--fg)}
+.tb2.fin{background:var(--c);border-color:var(--c);color:#fff}
+.tb2 svg{width:20px;height:20px}
+.tb2:active{transform:scale(.96)}
 </style></head>
 <body>
 <div id="app"></div>
@@ -87,7 +113,7 @@ try{if(matchMedia('(prefers-reduced-motion: reduce)').matches)gsap.globalTimelin
 <script>
 var PAL=['#a855f7','#22a58a','#3b82f6','#f59e0b','#ec4899','#ef4444','#84cc16','#06b6d4'];
 var EMO=['☀️','🛏️','🪥','💧','🧘','🏃','📚','💪','🍎','😴','💊','✍️'];
-var IC={plus:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+var IC={clock:`<svg viewBox='0 0 24 24' fill='none' stroke='#fff' stroke-width='2.4' stroke-linecap='round'><circle cx='12' cy='13' r='7.5'/><path d='M12 9v4l2.5 2M9.5 3h5'/></svg>`,plus:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
 play:'<svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15l13-7.5z"/></svg>',
 pause:'<svg viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
 ok:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'};
@@ -133,7 +159,7 @@ h+='</div><div class="list">';
 if(!S.habits.length)h+='<div class="empty">Привычек пока нет.<br>Нажми «+», чтобы создать первую.</div>';
 S.habits.forEach(function(x){
 var dn=isDone(x,sel),run=S.run&&S.run.id===x.id&&S.run.key===sel;
-var icon=dn?IC.ok:x.type==='timer'?(run?IC.pause:IC.play):IC.plus;
+var icon=dn?IC.ok:x.type==='timer'?(run?IC.clock:IC.play):IC.plus;
 h+='<div class="card" style="--c:'+x.color+'"><div class="ic">'+esc(x.emoji)+'</div><button class="tx" data-edit="'+x.id+'"><b>'+esc(x.name)+'</b><span data-sub="'+x.id+'">'+sub(x,sel)+'</span></button><button class="ring'+(dn?' done':'')+(run?' run':'')+'" data-act="'+x.id+'" aria-label="Отметить">'+icon+'</button></div>'});
 h+='</div>'}
 else if(view==='stats')h=statsHTML();
@@ -207,7 +233,7 @@ else if(d.edit)openSheet(d.edit);
 else if(d.act){var h=S.habits.find(function(x){return x.id===d.act});var was=isDone(h,sel);setTimeout(function(){popRing(h.id,!was&&isDone(h,sel))},0);
 if(h.type==='check')setVal(h,sel,isDone(h,sel)?0:1);
 else if(h.type==='count')setVal(h,sel,isDone(h,sel)?0:val(h,sel)+1);
-else{if(S.run&&S.run.id===h.id&&S.run.key===sel)stopRun();else{var b=val(h,sel);stopRun();S.run={id:h.id,key:sel,start:Date.now(),base:b}}}
+else{startTimer(h)}
 save();render()}
 else if(d.emo){grabForm();form.emoji=d.emo;sheet()}
 else if(d.type){grabForm();form.type=d.type;sheet()}
@@ -228,5 +254,56 @@ function rel(){if(pressed){gsap.to(pressed,{scale:1,duration:.4,ease:'back.out(3
 document.addEventListener('pointerup',rel);document.addEventListener('pointercancel',rel);
 window.addEventListener('resize',function(){movePill(true)});
 render('all');
+</script>
+<script>
+var TM={h:null,key:null,rem:true,L:0,sec:-1,lit:-1,cel:false,run:undefined,k:{v:0},raf:0};
+var TA0=220,TSW=280,TR=120,TN=48;
+function tpt(a,r){var t=a*Math.PI/180;return[150+r*Math.sin(t),150-r*Math.cos(t)]}
+function tmTot(){var h=TM.h;return(S.run&&S.run.id===h.id&&S.run.key===TM.key)?S.run.base+(Date.now()-S.run.start)/1000:val(h,TM.key)}
+function startTimer(h){if(!(S.run&&S.run.id===h.id&&S.run.key===sel)){var b=val(h,sel);stopRun();S.run={id:h.id,key:sel,start:Date.now(),base:b}}save();openTimer(h,sel)}
+function openTimer(h,k){
+TM.h=h;TM.key=k;TM.sec=-1;TM.lit=-1;TM.run=undefined;TM.rem=true;TM.cel=isDone(h,k);TM.k.v=0;TM.L=TR*TSW*Math.PI/180;
+var L=TM.L,p0=tpt(TA0,TR),p1=tpt(TA0+TSW,TR);
+var d='M'+p0[0].toFixed(2)+' '+p0[1].toFixed(2)+'A'+TR+' '+TR+' 0 1 1 '+p1[0].toFixed(2)+' '+p1[1].toFixed(2);
+var tk='';for(var i=0;i<TN;i++){var a=TA0+TSW*i/(TN-1),o=tpt(a,TR+17),n=tpt(a,TR+(i%6===0?30:24));tk+=`<line class='tk' x1='${o[0].toFixed(1)}' y1='${o[1].toFixed(1)}' x2='${n[0].toFixed(1)}' y2='${n[1].toFixed(1)}'/>`}
+var el=document.getElementById('tm');if(!el){el=document.createElement('div');el.id='tm';document.body.appendChild(el)}
+el.style.setProperty('--c',h.color);el.classList.remove('paused');
+var ds=`stroke-dasharray:${L} ${L};stroke-dashoffset:${L}`;
+el.innerHTML=`<div class='tmglow'></div><button class='tmx' data-tmclose='1' aria-label='Закрыть'><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round'><path d='M6 6l12 12M18 6L6 18'/></svg></button><div class='tmname'>${esc(h.name)}</div><div class='gauge'><svg viewBox='-10 -10 320 320'><defs><linearGradient id='gg' gradientUnits='userSpaceOnUse' x1='40' y1='250' x2='260' y2='50'><stop offset='0' style='stop-color:color-mix(in srgb,var(--c) 45%,#fff)'/><stop offset='1' style='stop-color:var(--c)'/></linearGradient><filter id='gl' x='-30%' y='-30%' width='160%' height='160%'><feGaussianBlur stdDeviation='7'/></filter></defs>${tk}<path class='trk' d='${d}'/><path class='prg gl' filter='url(#gl)' style='${ds}' d='${d}'/><path class='prg main' style='${ds}' d='${d}'/><circle class='knob' r='10' cx='${p0[0]}' cy='${p0[1]}'/><circle class='knob2' r='4.5' cx='${p0[0]}' cy='${p0[1]}'/></svg><div class='gc' data-tmmode='1'><div class='ge'>${esc(h.emoji)}</div><div class='gt'>0:00</div><div class='gs'></div><div class='gm'></div></div></div><div class='tmbtns'><button class='tb2' data-tmpause='1'></button><button class='tb2 fin' data-tmfin='1'>Завершить</button></div>`;
+el.style.display='flex';
+gsap.fromTo(el,{opacity:0},{opacity:1,duration:.35});
+gsap.fromTo('#tm .gauge',{scale:.7,opacity:0},{scale:1,opacity:1,duration:.7,ease:'back.out(1.6)'});
+gsap.to(TM.k,{v:1,duration:1.3,ease:'power3.out'});
+gsap.from('#tm .tk',{opacity:0,duration:.4,stagger:.012,delay:.1,clearProps:'opacity'});
+gsap.from('#tm .tmname,#tm .tmbtns > *',{y:20,opacity:0,duration:.5,stagger:.08,delay:.2,ease:'power3.out'});
+gsap.to('#tm .tmglow',{scale:1.18,opacity:.9,duration:2.6,yoyo:true,repeat:-1,ease:'sine.inOut'});
+gsap.to('#tm .knob',{attr:{r:13},duration:.8,yoyo:true,repeat:-1,ease:'sine.inOut'});
+cancelAnimationFrame(TM.raf);(function loop(){if(!TM.h)return;tmUpdate();TM.raf=requestAnimationFrame(loop)})()}
+function tmUpdate(){var h=TM.h,el=document.getElementById('tm');if(!h||!el)return;
+var tot=tmTot(),g=goal(h),p=Math.min(tot/g,1)*TM.k.v,off=TM.L*(1-p);
+var m=el.querySelector('.prg.main'),gl=el.querySelector('.prg.gl');m.style.strokeDashoffset=off;gl.style.strokeDashoffset=off;
+var pp=tpt(TA0+TSW*p,TR),kn=el.querySelector('.knob'),k2=el.querySelector('.knob2');kn.setAttribute('cx',pp[0]);kn.setAttribute('cy',pp[1]);k2.setAttribute('cx',pp[0]);k2.setAttribute('cy',pp[1]);
+var lit=p<=0?0:Math.min(TN,Math.floor(p*(TN-1))+1);
+if(lit!==TM.lit){el.querySelectorAll('.tk').forEach(function(t,i){t.classList.toggle('on',i<lit)});TM.lit=lit}
+var run=!!(S.run&&S.run.id===h.id&&S.run.key===TM.key);
+if(run!==TM.run){TM.run=run;el.classList.toggle('paused',!run);el.querySelector('[data-tmpause]').innerHTML=(run?IC.pause:IC.play).replace(/#fff/g,'currentColor')+(run?'Пауза':'Продолжить');TM.sec=-1}
+var sec=Math.floor(tot);
+if(sec!==TM.sec){TM.sec=sec;var over=tot>=g;
+el.querySelector('.gt').textContent=over?'+'+mmss(Math.floor(tot-g)):mmss(TM.rem?Math.ceil(g-tot):sec);
+el.querySelector('.gs').textContent=over?'Цель выполнена ✓':!run?'пауза':TM.rem?'осталось':'потрачено';
+el.querySelector('.gm').textContent=over?'всего '+mmss(sec):'из '+h.goal+' мин';
+if(over&&!TM.cel){TM.cel=true;tmCelebrate()}}}
+function tmCelebrate(){var g=document.querySelector('#tm .gauge');if(!g)return;var b=g.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;
+for(var i=0;i<18;i++){var q=document.createElement('div');q.style.cssText='position:fixed;z-index:40;pointer-events:none;border-radius:50%;width:9px;height:9px;margin:-4px;left:'+cx+'px;top:'+cy+'px;background:'+TM.h.color;document.body.appendChild(q);var an=i/18*Math.PI*2,rd=110+Math.random()*80;gsap.to(q,{x:Math.cos(an)*rd,y:Math.sin(an)*rd,opacity:0,scale:.2,duration:1,ease:'power2.out',onComplete:q.remove.bind(q)})}
+gsap.fromTo(g,{scale:1},{scale:1.07,duration:.25,yoyo:true,repeat:1,ease:'power2.out'});
+try{if(navigator.vibrate)navigator.vibrate(60)}catch(e){}}
+function closeTimer(){var el=document.getElementById('tm');if(!el||!TM.h)return;cancelAnimationFrame(TM.raf);TM.h=null;gsap.killTweensOf('#tm .tmglow');gsap.killTweensOf('#tm .knob');
+gsap.to(el,{opacity:0,scale:1.04,duration:.3,ease:'power2.in',onComplete:function(){el.style.display='none';gsap.set(el,{clearProps:'transform,opacity'})}});render()}
+document.addEventListener('click',function(e){var t=e.target.closest('[data-tmclose],[data-tmpause],[data-tmfin],[data-tmmode]');if(!t||!TM.h)return;
+if(t.dataset.tmclose)closeTimer();
+else if(t.dataset.tmpause){var h=TM.h,run=S.run&&S.run.id===h.id&&S.run.key===TM.key;if(run)stopRun();else{var b=val(h,TM.key);stopRun();S.run={id:h.id,key:TM.key,start:Date.now(),base:b}}save();render()}
+else if(t.dataset.tmfin){stopRun();save();closeTimer()}
+else if(t.dataset.tmmode){TM.rem=!TM.rem;TM.sec=-1;gsap.fromTo('#tm .gt',{scale:.88},{scale:1,duration:.45,ease:'back.out(3)'})}
+});
 </script>
 </body></html>
