@@ -503,11 +503,12 @@ if(S.run&&map[S.run.id])S.run.id=map[S.run.id];
 return map}
 
 /* ---------- local state -> DB rows ---------- */
-function habitRows(){return S.habits.map(function(h,i){
+function habitRows(){return S.habits.map(function(h,i){return habitRow(h,i)})}
+function habitRow(h,i){
 var img=(typeof h.img==='string'&&/^data:image\//.test(h.img)&&h.img.length<=70000)?h.img:null;
 return{id:h.id,name:String(h.name||'').trim().slice(0,80)||'\u041f\u0440\u0438\u0432\u044b\u0447\u043a\u0430',emoji:Array.from(h.emoji||'\u2b50').slice(0,8).join(''),img:img,
 color:/^#[0-9a-fA-F]{6}$/.test(h.color||'')?h.color:'#22a58a',type:['check','count','timer'].indexOf(h.type)>=0?h.type:'check',
-goal:Math.min(999,Math.max(1,(h.goal|0)||1)),sched:h.sched||{t:'daily'},created_on:DATE.test(h.created||'')?h.created:'2000-01-01',position:i}})}
+goal:Math.min(999,Math.max(1,(h.goal|0)||1)),sched:h.sched||{t:'daily'},created_on:DATE.test(h.created||'')?h.created:'2000-01-01',position:i}}
 function ideaRows(){var out=[];S.ideas.forEach(function(i){var t=String(i.text||'').trim().slice(0,140);if(t)out.push({id:i.id,text:t,done:!!i.done,done_at:i.done?new Date().toISOString():null})});return out}
 function logRows(){var ids={};S.habits.forEach(function(h){ids[h.id]=1});var out=[];
 Object.keys(S.log).forEach(function(d){if(!DATE.test(d))return;var o=S.log[d];Object.keys(o).forEach(function(k){var v=Math.round(o[k]);if(ids[k]&&v>0)out.push({habit_id:k,day:d,value:Math.min(86400,v)})})});return out}
@@ -539,12 +540,40 @@ S.log={};lg.forEach(function(r){(S.log[r.day]=S.log[r.day]||{})[r.habit_id]=r.va
 S.pick=(st&&st.picks)||{};S.freq=(st&&st.freq)||'mid';S.next=(st&&st.next_pick)||'';S.lastId=(st&&st.last_idea_id)||undefined;
 S.run=null;save()}
 
+/* ---------- merge with de-duplication ---------- */
+function nkey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ')}
+async function mergeLocal(){
+reid(false);save();
+var ch=await api.all('habits',[['position'],['created_at']]),ci=await api.all('ideas',[['created_at',false]]),cl=await api.all('habit_logs',[['day'],['habit_id']]);
+var hk={},ik={},clog={};
+ch.forEach(function(r){var k=nkey(r.name)+'|'+r.type;if(!hk[k])hk[k]=r.id});
+ci.forEach(function(r){var k=nkey(r.text);if(!ik[k])ik[k]={id:r.id,done:!!r.done,text:r.text}});
+cl.forEach(function(r){clog[r.habit_id+'|'+r.day]=r.value});
+var hmap={},newH=[],pos=ch.length,skipH=0;
+S.habits.forEach(function(h){var k=nkey(h.name)+'|'+h.type;
+if(hk[k]){hmap[h.id]=hk[k];skipH++}
+else{var nid=uid();hmap[h.id]=nid;hk[k]=nid;newH.push(habitRow(Object.assign({},h,{id:nid}),pos++))}});
+var newI=[],updI=[],skipI=0;
+S.ideas.forEach(function(i){var t=String(i.text||'').trim().slice(0,140);if(!t)return;var k=nkey(t),ex=ik[k];
+if(ex){skipI++;if(i.done&&!ex.done){ex.done=true;updI.push({id:ex.id,text:ex.text,done:true,done_at:new Date().toISOString()})}}
+else{var nid=uid();ik[k]={id:nid,done:!!i.done,text:t};newI.push({id:nid,text:t,done:!!i.done,done_at:i.done?new Date().toISOString():null})}});
+var out={};
+Object.keys(S.log).forEach(function(d){if(!DATE.test(d))return;Object.keys(S.log[d]).forEach(function(k){
+var hid=hmap[k],v=Math.min(86400,Math.round(S.log[d][k]));if(!hid||!(v>0))return;
+var key=hid+'|'+d,cv=clog[key];if(cv===undefined||v>cv){clog[key]=v;out[key]={habit_id:hid,day:d,value:v}}})});
+await api.upsert('habits',newH,'id');
+await api.upsert('ideas',newI.concat(updI),'id');
+await api.upsert('habit_logs',Object.keys(out).map(function(k){return out[k]}),'habit_id,day');
+return{habits:newH.length,skippedHabits:skipH,ideas:newI.length,skippedIdeas:skipI}}
+function reloadS(){try{var r=JSON.parse(ls('habits_v1'));if(!r||!r.habits)return;S.habits=r.habits;S.log=r.log||{};S.ideas=r.ideas||[];S.pick=r.pick||{};S.freq=r.freq||'mid';S.next=r.next||'';S.lastId=r.lastId;S.run=r.run||null}catch(e){}}
+function withLock(fn){if(typeof navigator!=='undefined'&&navigator.locks&&navigator.locks.request)return navigator.locks.request('habits-first-sync',fn);return fn()}
+
 /* ---------- conflict dialog ---------- */
 function askConflict(cc,lc){return new Promise(function(res){
 var bg=document.createElement('div');bg.className='cld-bg';
 var f=function(c){return '\u043f\u0440\u0438\u0432\u044b\u0447\u0435\u043a: '+c.habits+' \u00b7 \u0438\u0434\u0435\u0439: '+c.ideas+' \u00b7 \u043e\u0442\u043c\u0435\u0442\u043e\u043a: '+c.logs};
 bg.innerHTML="<div class='cld' role='dialog' aria-modal='true'><h2>\u041d\u0430\u0439\u0434\u0435\u043d\u044b \u0434\u0430\u043d\u043d\u044b\u0435 \u0432 \u043e\u0431\u043b\u0430\u043a\u0435</h2><p class='hint' style='margin:0'>\u0414\u0430\u043d\u043d\u044b\u0435 \u0435\u0441\u0442\u044c \u0438 \u043d\u0430 \u044d\u0442\u043e\u043c \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0435, \u0438 \u0432 \u0432\u0430\u0448\u0435\u043c \u043e\u0431\u043b\u0430\u0447\u043d\u043e\u043c \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0435. \u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435, \u0447\u0442\u043e \u0441 \u043d\u0438\u043c\u0438 \u0441\u0434\u0435\u043b\u0430\u0442\u044c.</p><div class='cmp'><div><b>\u0412 \u043e\u0431\u043b\u0430\u043a\u0435</b><span>"+f(cc)+"</span></div><div><b>\u041d\u0430 \u044d\u0442\u043e\u043c \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0435</b><span>"+f(lc)+"</span></div></div>"+
-"<button class='btn' data-cld='merge'>\u041e\u0431\u044a\u0435\u0434\u0438\u043d\u0438\u0442\u044c</button><div class='hint'>\u0414\u0430\u043d\u043d\u044b\u0435 \u044d\u0442\u043e\u0433\u043e \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0430 \u0434\u043e\u0431\u0430\u0432\u044f\u0442\u0441\u044f \u043a \u043e\u0431\u043b\u0430\u0447\u043d\u044b\u043c. \u041d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u043f\u043e\u0442\u0435\u0440\u044f\u0435\u0442\u0441\u044f, \u043d\u043e \u043c\u043e\u0433\u0443\u0442 \u043f\u043e\u044f\u0432\u0438\u0442\u044c\u0441\u044f \u0434\u0443\u0431\u043b\u0438.</div>"+
+"<button class='btn' data-cld='merge'>\u041e\u0431\u044a\u0435\u0434\u0438\u043d\u0438\u0442\u044c</button><div class='hint'>\u0414\u0430\u043d\u043d\u044b\u0435 \u044d\u0442\u043e\u0433\u043e \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0430 \u0434\u043e\u0431\u0430\u0432\u044f\u0442\u0441\u044f \u043a \u043e\u0431\u043b\u0430\u0447\u043d\u044b\u043c. \u041e\u0434\u0438\u043d\u0430\u043a\u043e\u0432\u044b\u0435 \u043f\u0440\u0438\u0432\u044b\u0447\u043a\u0438 \u0438 \u0438\u0434\u0435\u0438 (\u043f\u043e \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u044e) \u043d\u0435 \u0434\u0443\u0431\u043b\u0438\u0440\u0443\u044e\u0442\u0441\u044f, \u043e\u0442\u043c\u0435\u0442\u043a\u0438 \u043e\u0431\u044a\u0435\u0434\u0438\u043d\u044f\u044e\u0442\u0441\u044f, \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u0442\u0435\u0440\u044f\u0435\u0442\u0441\u044f.</div>"+
 "<button class='btn alt' data-cld='cloud'>\u041e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043e\u0431\u043b\u0430\u0447\u043d\u044b\u0435</button><div class='hint warn'>\u26a0 \u0422\u0435\u043a\u0443\u0449\u0438\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u043d\u0430 \u044d\u0442\u043e\u043c \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0435 \u0431\u0443\u0434\u0443\u0442 \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0438\u0441\u0430\u043d\u044b \u043e\u0431\u043b\u0430\u0447\u043d\u044b\u043c\u0438. \u041a\u043e\u043f\u0438\u044f \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0441\u044f \u0432 \u044d\u0442\u043e\u043c \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0435.</div>"+
 "<button class='btn red' data-cld='cancel'>\u041e\u0442\u043c\u0435\u043d\u0430</button><div class='hint'>\u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430, \u0434\u0430\u043d\u043d\u044b\u0435 \u043d\u0430 \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432\u0435 \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u044f\u0442\u0441\u044f.</div></div>";
 document.body.appendChild(bg);
@@ -556,18 +585,21 @@ hooks.ask=askConflict;
 function afterData(){if(view==='habits')render('cards');else render()}
 async function firstSync(){
 if(cloud.busy||!cloud.session)return;cloud.busy=true;cloudChanged();
-try{
-hooks.toast('\u041f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c \u043e\u0431\u043b\u0430\u043a\u043e\u2026');
+try{await withLock(async function(){
+reloadS();
+var l=getLink();
+if(l&&l.uid===cloud.session.user.id){await refreshStat();afterData();return}
+hooks.toast('Проверяем облако…');
 var cc={habits:await api.count('habits'),ideas:await api.count('ideas'),logs:await api.count('habit_logs')};
 var empty=!cc.habits&&!cc.ideas&&!cc.logs,lc=localSummary(),pristine=isPristine();
-if(empty){await uploadLocal(false);setLink();hooks.toast('\u0414\u0430\u043d\u043d\u044b\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u044b \u0432 \u043e\u0431\u043b\u0430\u043a\u043e \u2713')}
-else if(pristine){await downloadCloud();setLink();hooks.toast('\u0414\u0430\u043d\u043d\u044b\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u044b \u0438\u0437 \u043e\u0431\u043b\u0430\u043a\u0430 \u2713')}
+if(empty){await uploadLocal(false);setLink();hooks.toast('Данные загружены в облако ✓')}
+else if(pristine){await downloadCloud();setLink();hooks.toast('Данные загружены из облака ✓')}
 else{var ch=await hooks.ask(cc,lc);
-if(ch==='merge'){backup();await uploadLocal(true);await downloadCloud();setLink();hooks.toast('\u0414\u0430\u043d\u043d\u044b\u0435 \u043e\u0431\u044a\u0435\u0434\u0438\u043d\u0435\u043d\u044b \u2713')}
-else if(ch==='cloud'){backup();await downloadCloud();setLink();hooks.toast('\u041e\u0441\u0442\u0430\u0432\u0438\u043b\u0438 \u043e\u0431\u043b\u0430\u0447\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u2713')}
-else{await cloud.cl.auth.signOut({scope:'local'});hooks.toast('\u0412\u044b \u0432\u044b\u0448\u043b\u0438 \u0438\u0437 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430, \u0434\u0430\u043d\u043d\u044b\u0435 \u043d\u0435 \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u044b')}}
-await refreshStat();afterData()
-}catch(e){hooks.toast('\u041e\u0448\u0438\u0431\u043a\u0430 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438: '+(e&&e.message||e),true)}
+if(ch==='merge'){backup();var rep=await mergeLocal();await downloadCloud();setLink();hooks.toast('Объединено ✓ Добавлено привычек: '+rep.habits+', одинаковых пропущено: '+rep.skippedHabits)}
+else if(ch==='cloud'){backup();await downloadCloud();setLink();hooks.toast('Оставили облачные данные ✓')}
+else{await cloud.cl.auth.signOut({scope:'local'});hooks.toast('Вы вышли из аккаунта, данные не изменены')}}
+await refreshStat();afterData()})
+}catch(e){hooks.toast('Ошибка синхронизации: '+(e&&e.message||e),true)}
 finally{cloud.busy=false;cloudChanged()}}
 async function refreshStat(){if(!cloud.session||!cloud.cl)return;try{var h=await api.count('habits'),i=await api.count('ideas');cloud.stat='\u0412 \u043e\u0431\u043b\u0430\u043a\u0435: \u043f\u0440\u0438\u0432\u044b\u0447\u0435\u043a '+h+' \u00b7 \u0438\u0434\u0435\u0439 '+i}catch(e){cloud.stat=''}}
 function onSession(){var l=getLink();if(l&&cloud.session&&l.uid===cloud.session.user.id){refreshStat().then(cloudChanged);return}firstSync()}
@@ -613,7 +645,7 @@ cloud.cl.auth.onAuthStateChange(function(ev,session){cloud.session=session;
 if(session&&(ev==='INITIAL_SESSION'||ev==='SIGNED_IN'))setTimeout(onSession,0);
 if(ev==='SIGNED_OUT')cloud.stat='';
 setTimeout(cloudChanged,0)})}
-window.__cloud={cloud:cloud,api:api,hooks:hooks,firstSync:firstSync,uploadLocal:uploadLocal,downloadCloud:downloadCloud,reid:reid,habitRows:habitRows,ideaRows:ideaRows,logRows:logRows,stateRow:stateRow,isPristine:isPristine,fp:fp,wipeLocal:wipeLocal,getLink:getLink,getBackup:getBackup,localSummary:localSummary};
+window.__cloud={mergeLocal:mergeLocal,reloadS:reloadS,cloud:cloud,api:api,hooks:hooks,firstSync:firstSync,uploadLocal:uploadLocal,downloadCloud:downloadCloud,reid:reid,habitRows:habitRows,ideaRows:ideaRows,logRows:logRows,stateRow:stateRow,isPristine:isPristine,fp:fp,wipeLocal:wipeLocal,getLink:getLink,getBackup:getBackup,localSummary:localSummary};
 })();
 
 </script>
